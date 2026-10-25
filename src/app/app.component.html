@@ -1,0 +1,174 @@
+<!-- Main operator layout for floor editing, robot control, and event history. -->
+@if (world; as floor) {
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Fleet Floor home">
+        <span class="brand-mark"><ng-icon name="lucideWarehouse" size="19" /></span>
+        <span class="brand-name">FLEET<span> / </span>FLOOR</span>
+      </a>
+      <div class="topbar-center"><span class="live-dot"></span>LOCAL SIMULATION</div>
+      <div class="topbar-stats">
+        <span><ng-icon name="lucideBot" size="15" />{{ robots.length }} ROBOTS</span>
+        <span><ng-icon name="lucideGrid2x2" size="15" />{{ floor.width }} x {{ floor.height }}</span>
+        <span><ng-icon name="lucideClock3" size="15" />TICK {{ floor.tick }}</span>
+      </div>
+    </header>
+
+    <main class="main-layout" id="top">
+      <aside class="control-rail" aria-label="Simulation controls">
+        <section class="rail-section floor-section">
+          <div class="section-kicker"><span>FLOOR CONFIG</span><span class="kicker-line"></span></div>
+          <form class="floor-form" (ngSubmit)="submitFloor($event)">
+            <label>Width<input aria-label="Floor width" type="number" min="1" max="20" name="width" [(ngModel)]="dimensions.width" /></label>
+            <span class="dimension-x">x</span>
+            <label>Height<input aria-label="Floor height" type="number" min="1" max="20" name="height" [(ngModel)]="dimensions.height" /></label>
+            <button class="icon-button apply-size" type="submit" title="Create a new floor" aria-label="Create a new floor"><ng-icon name="lucideCheck" size="16" /></button>
+          </form>
+          <p class="field-note">Creating a floor clears robots and cells.</p>
+        </section>
+
+        <section class="rail-section">
+          <div class="section-kicker"><span>EDIT MODE</span><span class="kicker-line"></span></div>
+          <fieldset class="mode-switch">
+            <legend class="visually-hidden">Floor edit mode</legend>
+            <button type="button" [class.active]="mode === 'place'" (click)="mode = 'place'" title="Place and select robots"><ng-icon name="lucideBot" size="16" /><span>Robots</span></button>
+            <button type="button" [class.active]="mode === 'obstacle'" (click)="mode = 'obstacle'" title="Toggle obstacles"><ng-icon name="lucideX" size="16" /><span>Blocks</span></button>
+            <button type="button" [class.active]="mode === 'charger'" (click))="mode = 'charger'" title="Toggle chargers"><ng-icon name="lucideBatteryCharging" size="16" /><span>Charge</span></button>
+          </fieldset>
+          <div class="mode-hint">
+            @if (mode === 'place') { Click an empty cell to deploy a robot. }
+            @else if (mode === 'obstacle') { Click a cell to add or remove a block. }
+            @else { Click a cell to add or remove a charger. }
+          </div>
+        </section>
+
+        <section class="rail-section selected-section">
+          <div class="section-kicker"><span>SELECTED ROBOT</span><span class="kicker-line"></span></div>
+          @if (selectedRobot; as selected) {
+            <div class="selected-heading">
+              <span class="robot-token selected-token"><ng-icon class="robot-arrow" name="lucideArrowUp" size="18" [style.transform]="directionTransform(selected.facing)" /></span>
+              <div><strong>{{ selected.id }}</strong><span>{{ selected.x }}, {{ selected.y }} / {{ selected.facing }}</span></div>
+              <button class="subtle-icon" type="button" (click)="selectedId = null" aria-label="Deselect robot" title="Deselect"><ng-icon name="lucideX" size="15" /></button>
+            </div>
+            <div class="battery-row"><span><ng-icon name="lucideBattery" size="15" />BATTERY</span><strong>{{ selected.battery }}<small>%</small></strong></div>
+            <div class="battery-track"><span [style.width.%]="selected.battery" [class.low]="selected.battery < 20"></span></div>
+            <div class="command-pad" aria-label="Queue robot command">
+              <button class="command-button move-command" type="button" (click)="queue('MOVE')" title="Queue MOVE (Up arrow)"><ng-icon name="lucideArrowUp" size="17" /><span>MOVE</span></button>
+              <button class="command-button" type="button" (click)="queue('LEFT')" title="Queue LEFT (Left arrow)"><ng-icon name="lucideArrowLeft" size="17" /><span>LEFT</span></button>
+              <button class="command-button" type="button" (click)="queue('RIGHT')" title="Queue RIGHT (Right arrow)"><ng-icon name="lucideArrowRight" size="17" /><span>RIGHT</span></button>
+            </div>
+            <form class="goto-form" (ngSubmit)="submitGoto($event)">
+              <ng-icon name="lucideCrosshair" size="15" />
+              <input aria-label="GOTO X" placeholder="X" type="number" name="gotoX" [(ngModel)]="goto.x" />
+              <span>,</span>
+              <input aria-label="GOTO Y" placeholder="Y" type="number" name="gotoY" [(ngModel)]="goto.y" />
+              <button type="submit" title="Queue GOTO target"><ng-icon name="lucidePlus" size="16" /></button>
+            </form>
+          } @else {
+            <div class="empty-selection"><ng-icon name="lucideCircle" size="17" /><span>Select or place a robot to queue commands.</span></div>
+          }
+        </section>
+
+        <section class="rail-section run-section">
+          <div class="section-kicker"><span>SIMULATION</span><span class="kicker-line"></span></div>
+          <div class="run-controls">
+            <button class="step-button" type="button" (click)="post('/api/tick', {})" title="Advance one tick"><ng-icon name="lucideStepForward" size="16" /><span>STEP</span></button>
+            <button class="play-button" type="button" [class.is-playing]="floor.playing" (click)="setPlaying(!floor.playing)" [title]="floor.playing ? 'Pause simulation' : 'Play simulation'">
+              @if (floor.playing) { <ng-icon name="lucidePause" size="17" /> } @else { <ng-icon name="lucidePlay" size="17" /> }
+              <span>{{ floor.playing ? 'PAUSE' : 'PLAY' }}</span>
+            </button>
+          </div>
+          <label class="speed-control"><span>Tick interval</span><span>{{ (speed / 1000).toFixed(1) }}s</span>
+            <input aria-label="Tick interval" type="range" min="150" max="1500" step="50" name="speed" [(ngModel)]="speed" />
+          </label>
+        </section>
+
+        @if (error) {
+          <div class="error-banner" role="alert"><ng-icon name="lucideTriangleAlert" size="16" /><span>{{ error }}</span><button type="button" (click)="dismissError()" aria-label="Dismiss error"><ng-icon name="lucideX" size="14" /></button></div>
+        }
+      </aside>
+
+      <section class="floor-workspace" aria-label="Warehouse floor">
+        <div class="workspace-heading">
+          <div><div class="section-kicker"><span>LIVE FLOOR</span><span class="kicker-line"></span></div><h1>Warehouse <span>01</span></h1></div>
+          <div class="floor-state"><span [class.live-dot]="floor.playing" [class.paused-dot]="!floor.playing"></span>{{ floor.playing ? 'RUNNING' : 'PAUSED' }}</div>
+        </div>
+
+        <div class="floor-meta"><span><strong>{{ floor.width * floor.height }}</strong> CELLS</span><span><strong>{{ obstacleSet.size }}</strong> BLOCKS</span><span><strong>{{ chargerSet.size }}</strong> CHARGERS</span><span><strong>{{ robots.length }}</strong> ACTIVE UNITS</span></div>
+        <div class="board-scroll">
+          <div class="axis-y" aria-hidden="true">@for (y of rows; track y) { <span>{{ y.toString().padStart(2, '0') }}</span> }</div>
+          <div class="board-content">
+            <div class="floor-grid" [style.--columns]="floor.width">
+              @for (y of rows; track y) {
+                @for (x of columns; track x) {
+                  @let key = cellKey(x, y);
+                  @let robot = robotAt(x, y);
+                  <button class="floor-cell" type="button" [class.is-obstacle]="obstacleSet.has(key)" [class.is-charger]="chargerSet.has(key)" [class.has-robot]="!!robot" [class.is-selected]="robot?.id === selectedId" (click)="onCellClick(x, y, $event)" [title]="key + (robot ? ' / ' + robot.id : '') + (obstacleSet.has(key) ? ' / obstacle' : '') + (chargerSet.has(key) ? ' / charger' : '')" [attr.aria-label]="'Cell ' + x + ', ' + y + (robot ? ', robot ' + robot.id : '')">
+                    <span class="cell-coordinate">{{ x.toString().padStart(2, '0') }},{{ y.toString().padStart(2, '0') }}</span>
+                    @if (chargerSet.has(key)) { <ng-icon class="charger-icon" name="lucideBatteryCharging" size="13" /> }
+                    @if (obstacleSet.has(key)) { <span class="obstacle-mark"></span> }
+                    @if (robot) { <span class="robot-token cell-robot" [class.selected-token]="robot.id === selectedId"><ng-icon class="robot-arrow" name="lucideArrowUp" size="18" [style.transform]="directionTransform(robot.facing)" /><span class="robot-cell-id">{{ robot.id }}</span></span> }
+                  </button>
+                }
+              }
+            </div>
+            <div class="axis-x" [style.--columns]="floor.width">@for (x of columns; track x) { <span>{{ x.toString().padStart(2, '0') }}</span> }</div>
+          </div>
+        </div>
+        <div class="board-footer"><span><span class="origin-dot"></span>ORIGIN <b>0,0</b></span><span>SW CORNER <ng-icon name="lucideArrowRight" size="13" /> EAST <ng-icon name="lucideArrowUp" size="13" /> NORTH</span><span>{{ mode === 'place' ? 'CLICK TO DEPLOY' : mode === 'obstacle' ? 'CLICK TO TOGGLE BLOCK' : 'CLICK TO TOGGLE CHARGER' }}</span></div>
+      </section>
+
+      <aside class="activity-rail" aria-label="Fleet roster and event history">
+        <section class="robot-list-section">
+          <div class="section-kicker"><span>FLEET ROSTER</span><span class="kicker-line"></span><ng-icon name="lucideBot" size="15" /></div>
+          @if (robots.length) {
+            <div class="robot-list">
+              @for (robot of robots; track robot.id) {
+                <button class="robot-row" type="button" [class.active]="selectedId === robot.id" (click)="selectedId = robot.id">
+                  <span class="roster-marker"><ng-icon class="robot-arrow" name="lucideArrowUp" size="16" [style.transform]="directionTransform(robot.facing)" /></span>
+                  <span class="roster-info"><strong>{{ robot.id }}</strong><small>{{ robot.x }},{{ robot.y }} / {{ robot.facing.slice(0, 1) }}</small></span>
+                  <span class="queue-count" [title]="robot.queue.length + ' queued commands'">{{ robot.queue.length }}</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="roster-empty"><ng-icon name="lucideBot" size="20" /><span>No robots deployed</span></div>
+          }
+          <div class="queue-heading"><span>PENDING QUEUES</span><span>{{ queuedCount }} TOTAL</span></div>
+          <div class="queue-list">
+            @for (robot of robots; track robot.id) {
+              @if (robot.queue.length) {
+                <div class="queue-row"><span>{{ robot.id }}</span><div>
+                  @for (command of robot.queue.slice(0, 8); track $index) { <span class="queue-chip">{{ commandText(command) }}</span> }
+                  @if (robot.queue.length > 8) { <span class="queue-more">+{{ robot.queue.length - 8 }}</span> }
+                </div></div>
+              }
+            }
+            @if (!queuedCount) { <p class="no-queue">Queues are clear.</p> }
+          </div>
+        </section>
+
+        <section class="history-section">
+          <div class="section-kicker"><span>EVENT LOG</span><span class="kicker-line"></span><ng-icon name="lucideHistory" size="14" /></div>
+          <div class="history-feed">
+            @if (eventFeed.length) {
+              @for (event of eventFeed; track $index) {
+                <div class="event-row" [class.event-blocked]="isBlockedEvent(event)">
+                  <span class="event-marker"><ng-icon [name]="eventIcon(event)" size="12" /></span>
+                  <span class="event-copy">{{ eventSummary(event) }}</span>
+                  <span class="event-tick">{{ event.tick }}</span>
+                </div>
+              }
+            } @else {
+              <div class="history-empty"><ng-icon name="lucideClock3" size="17" /><span>World changes will appear here.</span></div>
+            }
+          </div>
+        </section>
+
+        <div class="persistence-note"><ng-icon name="lucideRotateCcw" size="14" /><span>STATE SAVED TO SQLITE</span><ng-icon name="lucideCheck" size="13" /></div>
+      </aside>
+    </main>
+  </div>
+} @else {
+  <main class="loading-screen"><ng-icon name="lucideWarehouse" size="24" /><span>{{ error || 'Connecting to floor...' }}</span></main>
+}

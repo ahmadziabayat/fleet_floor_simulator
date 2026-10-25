@@ -1,0 +1,7 @@
+ # Two robots attempt to exchange occupied cells and are both blocked.
+PLACE R1 0,0,EAST
+PLACE R2 1,0,WEST
+QUEUE R1 MOVE
+QUEUE R2 MOVE
+TICK
+REPORT

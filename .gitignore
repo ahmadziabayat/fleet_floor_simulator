@@ -1,0 +1,6 @@
+node_modules/
+dist/
+out-tsc/
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal

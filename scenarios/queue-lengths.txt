@@ -1,0 +1,10 @@
+ # Different queue lengths continue independently across successive ticks.
+FLOOR 4,3
+PLACE R2 0,0,NORTH
+PLACE R1 3,2,WEST
+QUEUE R2 MOVE RIGHT MOVE MOVE MOVE MOVE
+QUEUE R1 MOVE LEFT
+TICK 3
+REPORT
+TICK 10
+REPORT

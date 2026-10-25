@@ -1,0 +1,9 @@
+ # The lower ID wins the destination; the third robot cannot follow the loser.
+PLACE R1 0,1,EAST
+PLACE R2 2,1,WEST
+PLACE R3 3,1,WEST
+QUEUE R1 MOVE
+QUEUE R2 MOVE
+QUEUE R3 MOVE
+TICK
+REPORT
