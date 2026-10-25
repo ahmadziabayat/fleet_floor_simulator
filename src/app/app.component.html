@@ -96,8 +96,8 @@
 
         <div class="floor-meta"><span><strong>{{ floor.width * floor.height }}</strong> CELLS</span><span><strong>{{ obstacleSet.size }}</strong> BLOCKS</span><span><strong>{{ chargerSet.size }}</strong> CHARGERS</span><span><strong>{{ robots.length }}</strong> ACTIVE UNITS</span></div>
         <div class="board-scroll">
-          <div class="axis-y" aria-hidden="true">@for (y of rows; track y) { <span>{{ y.toString().padStart(2, '0') }}</span> }</div>
           <div class="board-content">
+            <div class="axis-y" aria-hidden="true">@for (y of rows; track y) { <span>{{ y.toString().padStart(2, '0') }}</span> }</div>
             <div class="floor-grid" [style.--columns]="floor.width">
               @for (y of rows; track y) {
                 @for (x of columns; track x) {
